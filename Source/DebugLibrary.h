@@ -3,7 +3,7 @@
 #include <windows.h>
 #include <iostream>
 
-#define ENABLE_LOGGING true
+#define ENABLE_LOGGING _DEBUG
 
 #if ENABLE_LOGGING
 #define ECE_LOG(message, ...)			wprintf(message, __VA_ARGS__);\
