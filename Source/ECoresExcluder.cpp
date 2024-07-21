@@ -25,7 +25,6 @@ void ECoresExcluder::SetProcessAffinity()
 		return;
 	}
 
-	/* update process affinity mask to block execution of threads without affinity mask on e-cores */
 	DWORD_PTR processAffinityMask, systemAffinityMask;
 	if (!GetProcessAffinityMask(GetCurrentProcess(), &processAffinityMask, &systemAffinityMask))
 	{
@@ -76,12 +75,11 @@ std::vector<uint64_t> ECoresExcluder::GetProcessorsEfficiencyMasks()
 				PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX pCoreInfo = reinterpret_cast<PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX>(structsArray + index);
 				index += pCoreInfo->Size;
 
-				uint8_t efficiencyClass = pCoreInfo->Processor.EfficiencyClass;
+				const uint8_t efficiencyClass = pCoreInfo->Processor.EfficiencyClass;
 
-				if (processorsMasks.size() < pCoreInfo->Processor.EfficiencyClass + 1)
+				if (const size_t totalAmount = efficiencyClass + 1; processorsMasks.size() < totalAmount)
 				{
-					const size_t amountToInsert = (pCoreInfo->Processor.EfficiencyClass + 1) - processorsMasks.size();
-					processorsMasks.resize(amountToInsert);
+					processorsMasks.resize(totalAmount);
 				}
 
 				processorsMasks[efficiencyClass] = processorsMasks[efficiencyClass] | pCoreInfo->Processor.GroupMask->Mask;
