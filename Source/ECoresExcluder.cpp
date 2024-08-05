@@ -44,19 +44,6 @@ void ECoresExcluder::SetProcessAffinity()
 	}
 }
 
-uint64_t ECoresExcluder::GetOnesCount(const uint64_t _mask)
-{
-	uint64_t pCoresAmount = _mask;
-	pCoresAmount = (pCoresAmount & 0x5555555555555555) + ((pCoresAmount >> 1) & 0x5555555555555555);
-	pCoresAmount = (pCoresAmount & 0x3333333333333333) + ((pCoresAmount >> 2) & 0x3333333333333333);
-	pCoresAmount = (pCoresAmount & 0x0f0f0f0f0f0f0f0f) + ((pCoresAmount >> 4) & 0x0f0f0f0f0f0f0f0f);
-	pCoresAmount = (pCoresAmount & 0x00ff00ff00ff00ff) + ((pCoresAmount >> 8) & 0x00ff00ff00ff00ff);
-	pCoresAmount = (pCoresAmount & 0x0000ffff0000ffff) + ((pCoresAmount >> 16) & 0x0000ffff0000ffff);
-	pCoresAmount = (pCoresAmount & 0x00000000ffffffff) + ((pCoresAmount >> 32) & 0x00000000ffffffff);
-
-	return pCoresAmount;
-}
-
 std::vector<uint64_t> ECoresExcluder::GetProcessorsEfficiencyMasks()
 {
 	std::vector<uint64_t> processorsMasks;
