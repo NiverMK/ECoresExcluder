@@ -1,7 +1,10 @@
 #include "pch.h"
 
 #include "ECoresExcluder.h"
-#include "DebugLibrary.h"
+#include "Logging/Logger.h"
+
+#include <bitset>
+#include <string>
 
 void ECoresExcluder::SetProcessAffinity()
 {
@@ -9,37 +12,43 @@ void ECoresExcluder::SetProcessAffinity()
 
 	if (!processorsEfficiencyMasks.size())
 	{
-		ECE_LOG_FUNC(L"Cores info is empty!");
+		LOG_FUNC(LogLevel::Error, L"Cores info is empty!");
 		return;
 	}
 
-	ECE_LOG(L"Found processor's cores:");
+	LOG(LogLevel::Info, L"Found processor's cores:");
 	for (size_t index = 0; index < processorsEfficiencyMasks.size(); index++)
 	{
-		ECE_LOG(L"Efficiency %I64u, cores mask %I64u", index, processorsEfficiencyMasks[index]);
+		std::bitset<64> bits = std::bitset<64>(processorsEfficiencyMasks[index]);
+		std::wstring bits_str = bits.to_string(L'0', L'1');
+		LOG(LogLevel::Info, L"Efficiency {}, cores mask {}", index, bits_str);
 	}
 
 	if (processorsEfficiencyMasks.size() == 1)
 	{
-		ECE_LOG_FUNC(L"There are no e-cores!");
+		LOG_FUNC(LogLevel::Warning, L"There are no e-cores!");
 		return;
 	}
 
 	DWORD_PTR processAffinityMask, systemAffinityMask;
 	if (!GetProcessAffinityMask(GetCurrentProcess(), &processAffinityMask, &systemAffinityMask))
 	{
-		ECE_LOG_WIN_ERROR(L"Can't get process affinity mask!");
+		LOG_WIN_ERROR(LogLevel::Error, L"Can't get process affinity mask!");
 	}
 
 	if (processAffinityMask != processorsEfficiencyMasks.back())
 	{
 		if (!SetProcessAffinityMask(GetCurrentProcess(), processorsEfficiencyMasks.back()))
 		{
-			ECE_LOG_WIN_ERROR(L"Can't set process affinity mask!");
+			LOG_WIN_ERROR(LogLevel::Error, L"Can't set process affinity mask!");
 		}
 		else
 		{
-			ECE_LOG(L"Process affinity mask was changed from %I64u to %I64u", processAffinityMask, processorsEfficiencyMasks.back());
+			std::bitset<64> bits_prev = std::bitset<64>(processAffinityMask);
+			std::bitset<64> bits_new = std::bitset<64>(processorsEfficiencyMasks.back());
+			std::wstring bits_prev_str = bits_prev.to_string(L'0', L'1');
+			std::wstring bits_new_str = bits_new.to_string(L'0', L'1');
+			LOG(LogLevel::Info, L"Process affinity mask was changed from {} to {}", bits_prev_str, bits_new_str);
 		}
 	}
 }
@@ -47,11 +56,9 @@ void ECoresExcluder::SetProcessAffinity()
 std::vector<uint64_t> ECoresExcluder::GetProcessorsEfficiencyMasks()
 {
 	std::vector<uint64_t> processorsMasks;
+	DWORD procInfoExSize = 0;
 
-	SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX procInfoEx;
-	DWORD procInfoExSize = sizeof(procInfoEx);
-
-	if (!GetLogicalProcessorInformationEx(LOGICAL_PROCESSOR_RELATIONSHIP::RelationProcessorCore, &procInfoEx, &procInfoExSize))
+	if (!GetLogicalProcessorInformationEx(LOGICAL_PROCESSOR_RELATIONSHIP::RelationProcessorCore, nullptr, &procInfoExSize))
 	{
 		char* structsArray = new char[procInfoExSize];
 
@@ -74,14 +81,14 @@ std::vector<uint64_t> ECoresExcluder::GetProcessorsEfficiencyMasks()
 		}
 		else
 		{
-			ECE_LOG_WIN_ERROR(L"Can't get processor's efficiency masks!");
+			LOG_WIN_ERROR(LogLevel::Error, L"Can't get processor's efficiency masks!");
 		}
 
 		delete[] structsArray;
 	}
 	else
 	{
-		processorsMasks.emplace_back(procInfoEx.Processor.GroupMask->Mask);
+		LOG_WIN_ERROR(LogLevel::Error, L"Can't get buffer's size!");
 	}
 
 	return processorsMasks;

@@ -2,7 +2,7 @@
 #include "pch.h"
 
 #include "ECoresExcluder.h"
-#include "DebugLibrary.h"
+#include "Logging/Logger.h"
 
 namespace
 {
@@ -16,30 +16,29 @@ VOID CALLBACK TimerCallback(PVOID lpParameter, BOOLEAN reserved)
 	wasAffinityChanged = true;
 }
 
-BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved)
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved)
 {
 	switch (ul_reason_for_call)
 	{
-	case DLL_PROCESS_ATTACH:
-		DebugLibrary::CreateConsole();
-		break;
-	case DLL_THREAD_ATTACH:
-	{
-		if (!wasAffinityChanged && !hTimer)
+		case DLL_PROCESS_ATTACH:
+			INIT_LOGGING();
+			break;
+		case DLL_THREAD_ATTACH:
 		{
-			/* don't try to change process affinity mask at startup, it may cause app crash */
-			const DWORD dueTime = 5000;
-			
-			/* Using CreateTimerQueueTimer instead of SetTimer in DLL because SetTimer creates a new thread */
-			if (!CreateTimerQueueTimer(&hTimer, NULL, TimerCallback, NULL, dueTime, 0, 0))
+			if (!wasAffinityChanged && !hTimer)
 			{
-				ECE_LOG_WIN_ERROR(L"CreateTimerQueueTimer was failed!");
+				/* don't try to change process affinity mask at startup, it may cause app crash */
+				const DWORD dueTime = 10000;
+				/* Using CreateTimerQueueTimer instead of SetTimer in DLL because SetTimer creates a new thread */
+				if (!CreateTimerQueueTimer(&hTimer, NULL, TimerCallback, NULL, dueTime, 0, 0))
+				{
+					LOG_WIN_ERROR(LogLevel::Error, L"CreateTimerQueueTimer was failed!");
+				}
 			}
 		}
-	}
-	case DLL_THREAD_DETACH:
-	case DLL_PROCESS_DETACH:
-		break;
+		case DLL_THREAD_DETACH:
+		case DLL_PROCESS_DETACH:
+			break;
 	}
 	return TRUE;
 }
